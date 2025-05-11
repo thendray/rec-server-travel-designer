@@ -14,14 +14,14 @@ object BaseEndpoints {
   val getPlaceRecEndpoint =
     baseRecEndpoint
       .in("place" / path[Long]("userId"))
-      .post
+      .get
       .out(jsonBody[PlaceRecommendationResponse])
       .errorOut(jsonBody[String])
 
   val getRouteRecEndpoint =
     baseRecEndpoint
       .in("route" / path[Long]("userId"))
-      .post
+      .get
       .out(jsonBody[RouteRecommendationResponse])
       .errorOut(jsonBody[String])
 

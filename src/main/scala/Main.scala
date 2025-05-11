@@ -1,19 +1,16 @@
+import cats.syntax.all._
+import handler.BaseRouteRouter
 import org.http4s._
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
+import repository.recommendation.RecommendationDaoImpl
+import service.RecommendationServiceImpl
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
-import zio.interop.catz._
-import cats.syntax.all._
-import handler.BaseRouteRouter
-import pureconfig.generic.auto._
-import service.RecommendationServiceImpl
 import task.RecommendationTask
-import utils.CustomTransactor
-import zio.{Clock, Schedule, Scope, Task, UIO, ULayer, URLayer, ZIO, ZLayer, durationInt}
-
-import java.util.concurrent.TimeUnit
+import zio.interop.catz._
+import zio.{Schedule, Scope, Task, ULayer, ZIO, ZLayer, durationInt}
 
 object Main extends zio.ZIOAppDefault {
 
@@ -31,7 +28,8 @@ object Main extends zio.ZIOAppDefault {
     ZLayer.make[EnvIn](
       RecommendationServiceImpl.live,
       BaseRouteRouter.live,
-      ZLayer.succeed(CustomTransactor.transactor)
+//      ZLayer.succeed(CustomTransactor.transactor),
+      RecommendationDaoImpl.live
     )
 
   def getEndpoints(router: BaseRouteRouter): List[ZServerEndpoint[Any, Any]] =
@@ -40,11 +38,10 @@ object Main extends zio.ZIOAppDefault {
       router.getRoutes
     ).map(_.tag("Recommendation"))
 
-  val task =
-    ZIO.service[RecommendationTask].map(_.task)
-
-  val scheduledTask: ZIO[RecommendationTask, Throwable, Unit] =
-    task.repeat(Schedule.spaced(1.minutes)).forever
+  val scheduleTask = for {
+    task <- ZIO.service[RecommendationTask].map(_.task)
+    _ <- task.repeat(Schedule.spaced(1.minutes))
+  } yield ()
 
   def run: ZIO[Environment with Scope, Any, Any] = {
     val server = (for {
@@ -67,8 +64,8 @@ object Main extends zio.ZIOAppDefault {
       .provideLayer(makeLayer)
 
     (for {
-      _ <- scheduledTask.forkDaemon
+      _ <- scheduleTask.forkDaemon
       _ <- server
-    } yield ()).provide(RecommendationTask.live)
+    } yield ()).provide(RecommendationTask.live, RecommendationDaoImpl.live)
   }
 }

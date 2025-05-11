@@ -9,9 +9,11 @@ object RouteRecommendationResponse {
   case class RouteRecommendation(
       id: Long,
       name: String,
-      protos: List[String],
+      photos: List[String],
       days: Int,
       beginAddress: String,
       endAddress: String,
-      topPlacesName: List[String])
+      topPlaces: List[TopPlace])
+
+  case class TopPlace(name: String, address: String)
 }

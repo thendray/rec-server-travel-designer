@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  main-travel-designer:
+    image: andrey8079/rec-travel-designer:latest
+    ports:
+      - "8084:8084"
+    restart: always
